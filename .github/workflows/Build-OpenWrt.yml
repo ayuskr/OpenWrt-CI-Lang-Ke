@@ -256,40 +256,79 @@ jobs:
       run: |
         cat "$GITHUB_WORKSPACE/$CONFIG_FILE" "$GITHUB_WORKSPACE/$GENERAL_CONFIG_FILE" > "$OPENWRT_PATH/.config"
         cd "$OPENWRT_PATH"
+
         if [ "${{ inputs.remove_sqm_scripts_nss }}" = "true" ]; then
           sed -i '/CONFIG_PACKAGE_sqm-scripts-nss=y/d' .config
         fi
+
         make defconfig
+
+        echo "===== 最终选中的 LuCI 插件和主题 ====="
+        grep -E '^CONFIG_PACKAGE_luci-(app|theme)-.*=y$' .config || true
+
+        echo "===== 检查必须内置的插件 ====="
+        required_packages=(
+          luci-theme-aurora
+          luci-app-lucky
+          luci-app-acme
+          luci-app-upnp
+          luci-app-autoreboot
+          luci-app-cpufreq
+          luci-app-banip
+          luci-app-mosdns
+          luci-app-passwall
+        )
+
+        missing_packages=0
+        for pkg in "${required_packages[@]}"; do
+          if grep -qx "CONFIG_PACKAGE_${pkg}=y" .config; then
+            echo "已选中：$pkg"
+          else
+            echo "::error::${pkg} 未进入最终配置，请检查插件源码、依赖和配置覆盖"
+            missing_packages=$((missing_packages + 1))
+          fi
+        done
+
+        if [ "$missing_packages" -gt 0 ]; then
+          echo "::error::共有 $missing_packages 个必选插件未进入最终配置，停止编译"
+          exit 1
+        fi
+
         if [ -d staging_dir ]; then
-          # Refresh component stamps before aggregate stamps so restored host tools and toolchains remain valid.
+          # 先刷新组件时间戳，再刷新汇总时间戳，保留恢复的工具链和主机工具。
           tools_stamp="$(find staging_dir/host -maxdepth 2 -type f -name '.tools_compile*' -print -quit 2>/dev/null || true)"
           if [ -n "$tools_stamp" ]; then
             find staging_dir/host/stamp -maxdepth 1 -type f ! -name '.tools_compile*' -exec touch {} + 2>/dev/null || true
             find staging_dir/host -maxdepth 2 -type f -name '.tools_compile*' -exec touch {} +
           fi
+
           for toolchain_dir in staging_dir/toolchain-*; do
             [ -d "$toolchain_dir" ] || continue
             toolchain_stamp="$(find "$toolchain_dir" -maxdepth 2 -type f -name '.toolchain_compile*' -print -quit)"
             [ -n "$toolchain_stamp" ] || continue
+
             if [ -d "$toolchain_dir/stamp" ]; then
               find "$toolchain_dir/stamp" -maxdepth 1 -type f ! -name '.toolchain_compile*' -exec touch {} +
             fi
+
             find "$toolchain_dir" -maxdepth 2 -type f -name '.toolchain_compile*' -exec touch {} +
           done
         fi
+
         for attempt in 1 2 3; do
           if make download -j"$(nproc)"; then
             break
           fi
+
           if [ "$attempt" -eq 3 ]; then
             echo "Error: make download failed after $attempt attempts" >&2
             exit 1
           fi
+
           echo "::warning::make download failed (attempt $attempt/3); removing incomplete files before retry."
           find dl -type f -size -1024c -print -delete
           sleep $((attempt * 5))
         done
-
     - name: Compile Firmware(开始编译固件)
       run: |
         cd "$OPENWRT_PATH"
