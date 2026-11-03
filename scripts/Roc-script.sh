@@ -336,5 +336,24 @@ fi
 # 清理 PassWall 的 chnlist 规则文件
 # echo "baidu.com"  > package/luci-app-passwall/luci-app-passwall/root/usr/share/passwall/rules/chnlist
 
+### mosDNS ###
+# 同时提供 mosdns、luci-app-mosdns 和 v2dat。
+if package_enabled luci-app-mosdns mosdns; then
+  # 移除 feeds 中可能存在的同名包，避免重复定义。
+  rm -rf \
+    feeds/packages/net/mosdns \
+    feeds/packages/utils/v2dat \
+    feeds/luci/applications/luci-app-mosdns \
+    package/feeds/packages/mosdns \
+    package/feeds/packages/v2dat \
+    package/feeds/luci/luci-app-mosdns \
+    package/mosdns
+
+  clone_repository \
+    https://github.com/sbwml/luci-app-mosdns \
+    v5 \
+    package/mosdns
+fi
+
 ./scripts/feeds update -i -a
 ./scripts/feeds install -a
