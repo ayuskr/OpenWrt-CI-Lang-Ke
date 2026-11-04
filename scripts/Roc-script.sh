@@ -136,6 +136,18 @@ printf 'Repository\tBranch\tCommit\n' > "$THIRD_PARTY_SOURCES_FILE"
 sed -i "s/hostname='.*'/hostname='Libwrt'/g" \
   package/base-files/files/bin/config_generate
 
+  ### 设置 Vantage 为默认 LuCI 主题 ###
+mkdir -p package/base-files/files/etc/uci-defaults
+
+cat > package/base-files/files/etc/uci-defaults/99-default-luci-theme <<'EOF'
+#!/bin/sh
+uci -q set luci.main.mediaurlbase='/luci-static/vantage'
+uci -q commit luci
+exit 0
+EOF
+
+chmod 755 package/base-files/files/etc/uci-defaults/99-default-luci-theme
+
 # 不向 LuCI 固件版本信息追加编译者署名和编译时间
 
 # 调整NSS驱动q6_region内存区域预留大小（ipq6018.dtsi默认预留85MB，ipq6018-512m.dtsi默认预留55MB，带WiFi必须至少预留54MB，以下分别是改成预留16MB、32MB、64MB和96MB）
