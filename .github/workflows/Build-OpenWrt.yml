@@ -268,15 +268,16 @@ jobs:
 
         echo "===== 检查必须内置的插件 ====="
         required_packages=(
-          luci-theme-aurora
           luci-app-lucky
-          luci-app-acme
+          luci-app-microsocks
           luci-app-upnp
           luci-app-autoreboot
           luci-app-cpufreq
           luci-app-banip
           luci-app-mosdns
           luci-app-passwall
+          luci-theme-vantage
+          luci-theme-material3
         )
 
         missing_packages=0
