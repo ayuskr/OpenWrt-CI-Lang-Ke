@@ -342,5 +342,17 @@ if package_enabled luci-app-mosdns mosdns; then
     package/mosdns
 fi
 
+### Vantage 主题 ###
+git clone --depth 1 \
+  https://github.com/anothaDev/luci-theme-vantage.git \
+  /tmp/luci-theme-vantage
+
+cp -a /tmp/luci-theme-vantage/luci-theme-vantage \
+  package/luci-theme-vantage
+
+### Material Design 3 主题 ###
+git clone --depth 1 \
+  https://github.com/KawaiiHachimi/luci-theme-material3.git \
+  package/luci-theme-material3
 ./scripts/feeds update -i -a
 ./scripts/feeds install -a
